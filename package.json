@@ -1,0 +1,28 @@
+{
+  "name": "draftjs-playground",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "NODE_PATH=./src watchify src/index.jsx --extension=.jsx -o public/bundle.js -t babelify",
+    "start": "browser-sync start --server 'public'"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "babel-plugin-transform-decorators-legacy": "^1.3.4",
+    "babel-polyfill": "^6.13.0",
+    "babel-preset-es2015": "^6.13.2",
+    "babel-preset-react": "^6.11.1",
+    "babel-preset-stage-0": "^6.5.0",
+    "babel-register": "^6.11.6",
+    "babelify": "^7.3.0",
+    "browser-sync": "^2.14.0",
+    "browserify": "^13.1.0",
+    "browserify-css": "^0.9.1",
+    "draft-js": "^0.8.1",
+    "react": "^15.3.0",
+    "react-dom": "^15.3.0",
+    "watchify": "^3.7.0"
+  }
+}
