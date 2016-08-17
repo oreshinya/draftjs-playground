@@ -7,10 +7,13 @@ import {
   EditorState,
   ContentState,
   convertToRaw,
-  getDefaultKeyBinding
+  getDefaultKeyBinding,
+  DefaultDraftBlockRenderMap,
+  EditorBlock
 } from 'draft-js';
 import isEmpty from 'lodash/isEmpty';
 import compact from 'lodash/compact';
+import { Map } from 'immutable';
 
 import decorator from 'decorator';
 
@@ -54,15 +57,94 @@ const addListener = (listener) => {
   createEntity(data);
 });
 
-function myKeyBindingFn(e: SyntheticKeyboardEvent): string {
+const RenderMap = Map({
+  'check-list-item': {
+    element: 'div'
+  }
+}).merge(DefaultDraftBlockRenderMap);
+
+const myKeyBindingFn = (e) => {
   if (e.keyCode === 8 && isEmpty(e.target.textContent)) {
     return 'destroyItem';
   }
   return getDefaultKeyBinding(e);
-}
+};
+
+const getDefaultBlockData = (blockType, initialData={}) => {
+  switch(blockType) {
+    case 'check-list-item': return { checked: false };
+    default: return initialData;
+  }
+};
+
+export const getCurrentBlock = (editorState) => {
+  const selectionState = editorState.getSelection();
+  const contentState = editorState.getCurrentContent();
+  const block = contentState.getBlockForKey(selectionState.getStartKey());
+  return block;
+};
+
+export const resetBlockWithType = (editorState, newType='unstyled') => {
+  const contentState = editorState.getCurrentContent();
+  const selectionState = editorState.getSelection();
+  const key = selectionState.getStartKey();
+  const blockMap = contentState.getBlockMap();
+  const block = blockMap.get(key);
+
+  let newText = "";
+  let text = block.getText();
+  if (block.getLength() >= 2) {
+    newText = text.substr(1);
+  }
+  const newBlock = block.merge({
+    text: newText,
+    type: newType,
+    data: getDefaultBlockData(newType),
+  });
+  const newContentState = contentState.merge({
+    blockMap: blockMap.set(key, newBlock),
+    selectionAfter: selectionState.merge({
+      anchorOffset: 0,
+      focusOffset: 0,
+    }),
+  });
+  return EditorState.push(editorState, newContentState, 'change-block-type');
+};
+
 
 window.hoge = () => {
   return state;
+};
+
+class CheckListItem extends Component {
+  render() {
+    const data = this.props.block.getData();
+    const checked = data.get('checked') === true ? true : false;
+    return (
+      <div>
+        <input type="checkbox" style={{
+          cursor: 'pointer',
+          float: 'left',
+          position: 'relative',
+          top: '4px',
+          left: '-4px'
+        }} checked={ checked } />
+        <EditorBlock {...this.props} />
+      </div>
+    );
+  }
+}
+
+const blockRenderer = (contentBlock) => {
+  const type = contentBlock.getType();
+  switch (type) {
+    case 'check-list-item':
+      return {
+        component: CheckListItem
+      };
+    default:
+      return null;
+  }
 };
 
 class ItemEditor extends Component {
@@ -90,6 +172,49 @@ class ItemEditor extends Component {
     return true;
   };
 
+  onBeforeInput = (str) => {
+    const { editorState } = this.state;
+    const selection = editorState.getSelection();
+    const block = getCurrentBlock(editorState);
+    const blockType = block.getType();
+    const blockLength = block.getLength();
+    if (selection.getAnchorOffset() > 1 || blockLength > 1) {
+      return false;
+    }
+    const mapping = {'[]': 'check-list-item'};
+    const blockTo = mapping[block.getText()[0] + str];
+    if (!blockTo) { return false; }
+
+    const finalType = blockTo.split(':');
+    if (finalType.length < 1 || finalType.length > 3) {
+      return false;
+    }
+    let fType = finalType[0];
+    if (finalType.length == 1) {
+      if (blockType == finalType[0]) {
+        return false;
+      }
+    } else if (finalType.length == 2) {
+      if (blockType == finalType[1]) {
+        return false;
+      }
+      if (blockType == finalType[0]) {
+        fType = finalType[1];
+      }
+    } else if (finalType.length == 3) {
+      if (blockType == finalType[2]) {
+        return false;
+      }
+      if (blockType == finalType[0]) {
+        fType = finalType[1];
+      } else {
+        fType = finalType[2];
+      }
+    }
+    this.onChange(resetBlockWithType(editorState, fType));
+    return true;
+  };
+
   render() {
     const { editorState } = this.state;
     return (
@@ -98,6 +223,9 @@ class ItemEditor extends Component {
         onChange={this.onChange}
         handleKeyCommand={this.onCommand}
         keyBindingFn={myKeyBindingFn}
+        blockRendererFn={blockRenderer}
+        handleBeforeInput={this.onBeforeInput}
+        blockRenderMap={RenderMap}
       />
     );
   }
