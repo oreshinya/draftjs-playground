@@ -2,7 +2,15 @@ import 'babel-polyfill';
 import React, { Component } from 'react';
 import ReactDOM from 'react-dom';
 import uuid from 'node-uuid';
-import {Editor, EditorState, ContentState, convertToRaw} from 'draft-js';
+import {
+  Editor,
+  EditorState,
+  ContentState,
+  convertToRaw,
+  getDefaultKeyBinding
+} from 'draft-js';
+import isEmpty from 'lodash/isEmpty';
+import compact from 'lodash/compact';
 
 import decorator from 'decorator';
 
@@ -22,6 +30,17 @@ const updateEntity = (entity) => {
   state = Object.assign({}, state, {
     items: Object.assign({}, state.items, {[entity.id]: entity})
   });
+  listeners.forEach((listener) => {
+    listener(state);
+  });
+};
+const destroyEntity = (entity) => {
+  const itemState = Object.assign({}, state.items);
+  delete itemState[entity.id];
+  state = Object.assign({}, state, { items: itemState });
+  listeners.forEach((listener) => {
+    listener(state);
+  });
 };
 const addListener = (listener) => {
   listeners.push(listener);
@@ -34,6 +53,13 @@ const addListener = (listener) => {
 ].forEach((data) => {
   createEntity(data);
 });
+
+function myKeyBindingFn(e: SyntheticKeyboardEvent): string {
+  if (e.keyCode === 8 && isEmpty(e.target.textContent)) {
+    return 'destroyItem';
+  }
+  return getDefaultKeyBinding(e);
+}
 
 window.hoge = () => {
   return state;
@@ -56,12 +82,21 @@ class ItemEditor extends Component {
     this.setState({editorState});
   };
 
+  onCommand = (command) => {
+    if (command !== 'destroyItem') { return false; }
+    const { item } = this.props;
+    destroyEntity(item);
+    return true;
+  };
+
   render() {
     const { editorState } = this.state;
     return (
       <Editor
         editorState={editorState}
         onChange={this.onChange}
+        handleKeyCommand={this.onCommand}
+        keyBindingFn={myKeyBindingFn}
       />
     );
   }
@@ -114,9 +149,9 @@ class ItemList extends Component {
   }
 
   _createComponentState(stateSource) {
-    const items = stateSource.ids.map((id) => {
+    const items = compact(stateSource.ids.map((id) => {
       return stateSource.items[id];
-    });
+    }));
     return { items };
   }
 
