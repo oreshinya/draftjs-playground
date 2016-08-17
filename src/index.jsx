@@ -4,6 +4,8 @@ import ReactDOM from 'react-dom';
 import uuid from 'node-uuid';
 import {Editor, EditorState, ContentState} from 'draft-js';
 
+import decorator from 'decorator';
+
 let state = {items: {}, ids: []};
 const listeners = [];
 const createEntity = (data) => {
@@ -35,7 +37,7 @@ class ItemEditor extends Component {
     const text = `${item.name} @${item.assignee} #${item.label}`;
     const contentState = ContentState.createFromText(text);
     this.state = {
-      editorState: EditorState.createWithContent(contentState)
+      editorState: EditorState.createWithContent(contentState, decorator)
     };
   }
   render() {
