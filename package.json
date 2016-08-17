@@ -22,8 +22,8 @@
     "browserify-css": "^0.9.1",
     "draft-js": "^0.8.1",
     "node-uuid": "^1.4.7",
-    "react": "^15.3.0",
-    "react-dom": "^15.3.0",
+    "react": "15.2.1",
+    "react-dom": "15.2.1",
     "watchify": "^3.7.0"
   }
 }

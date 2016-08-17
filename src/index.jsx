@@ -2,7 +2,7 @@ import 'babel-polyfill';
 import React, { Component } from 'react';
 import ReactDOM from 'react-dom';
 import uuid from 'node-uuid';
-import {Editor, EditorState, ContentState} from 'draft-js';
+import {Editor, EditorState, ContentState, convertToRaw} from 'draft-js';
 
 import decorator from 'decorator';
 
@@ -18,33 +18,50 @@ const createEntity = (data) => {
     listener(state);
   });
 };
+const updateEntity = (entity) => {
+  state = Object.assign({}, state, {
+    items: Object.assign({}, state.items, {[entity.id]: entity})
+  });
+};
 const addListener = (listener) => {
   listeners.push(listener);
 };
 
 [
-  {name: 'hoge', label: 'bug', assignee: 'oreshinya'},
-  {name: 'fuga', label: 'enhancement', assignee: 'tera'},
-  {name: 'piyo', label: 'bug', assignee: 'tera'}
+  {name: 'hoge @oreshinya #bug', label: 'bug', assignee: 'oreshinya'},
+  {name: 'fuga @tera #enhancement', label: 'enhancement', assignee: 'tera'},
+  {name: 'piyo @tera #bug', label: 'bug', assignee: 'tera'}
 ].forEach((data) => {
   createEntity(data);
 });
+
+window.hoge = () => {
+  return state;
+};
 
 class ItemEditor extends Component {
   constructor(props) {
     super(props);
     const item = props.item;
-    const text = `${item.name} @${item.assignee} #${item.label}`;
-    const contentState = ContentState.createFromText(text);
+    const contentState = ContentState.createFromText(item.name);
     this.state = {
       editorState: EditorState.createWithContent(contentState, decorator)
     };
   }
+
+  onChange = (editorState) => {
+    const name = editorState.getCurrentContent().getPlainText();
+    const { item } = this.props;
+    updateEntity(Object.assign({}, item, { name }));
+    this.setState({editorState});
+  };
+
   render() {
     const { editorState } = this.state;
     return (
       <Editor
         editorState={editorState}
+        onChange={this.onChange}
       />
     );
   }
@@ -75,7 +92,10 @@ class ItemList extends Component {
     const { items } = this.state;
     return (
       <div>
-        {items.map(this._renderItem)}
+        <div onClick={this._addItem}>Add item</div>
+        <div>
+          {items.map(this._renderItem)}
+        </div>
       </div>
     );
   }
@@ -87,6 +107,10 @@ class ItemList extends Component {
         item={item}
       />
     );
+  }
+
+  _addItem() {
+    createEntity({name: 'Some name @kwmt'});
   }
 
   _createComponentState(stateSource) {
@@ -101,7 +125,6 @@ class ItemList extends Component {
   }
 }
 
-window.hoge = state;
 const App = () => {
   return (
     <div>
