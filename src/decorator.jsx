@@ -9,6 +9,11 @@ const HIGHLIGHT_RULES = [
   {
     regex: /\#[\w]+/g,
     color: "rgb(95, 184, 138)"
+  },
+  {
+    link: true,
+    regex: /https?:\/\/[\S]+/g,
+    color: "rgb(98, 177, 254)"
   }
 ];
 
@@ -23,11 +28,16 @@ export default new CompositeDecorator(HIGHLIGHT_RULES.map(rule => (
       }
     },
     component(props) {
-      return <span {...props} style={{
-        color: rule.color,
-        direction: "ltr",
-        unicodeBidi: "bidi-override",
-      }}>{props.children}</span>;
+      if (rule.link) {
+        return <a {...props} onClick={() => { window.open(props.decoratedText, '_blank'); }} style={{
+          color: rule.color,
+          cursor: 'pointer'
+        }}>{props.children}</a>;
+      } else {
+        return <span {...props} style={{
+          color: rule.color
+        }}>{props.children}</span>;
+      }
     },
   }
 )));
