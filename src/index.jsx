@@ -76,6 +76,7 @@ class ItemEditor extends Component {
   }
 
   onChange = (editorState) => {
+    console.log('onChange');
     const name = editorState.getCurrentContent().getPlainText();
     const { item } = this.props;
     updateEntity(Object.assign({}, item, { name }));
